@@ -16,7 +16,7 @@ https://github.com/phucnguyen752/sdf-image.git#upm
 
 Select **SDF Outline → Update** for later releases. An older installation may still appear as **SDF Image** until updated. The library name changed in **0.9.0**; the package ID `com.sdfimage.ugui`, component names, script GUIDs and installation URL are unchanged.
 
-For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.9.0`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
+For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.0`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
 
 ## SDF Image: start with a sprite
 
@@ -38,6 +38,9 @@ Bake settings belong to the source texture. Select it and choose **SDF → Open 
 1. Create **GameObject → UI → SDF Text**.
 2. Assign a **TMP SDF font** and edit content, size and alignment as usual. Import TMP Essential Resources if Unity prompts for them.
 3. Enable **SDF Effects → Effects Enabled** and edit **Layers** below the standard TMP Inspector. No sprite bake is needed.
+4. For an arched title, enable **SDF Text Curve → Curve Enabled** and set **Curve Angle** (try **30°**). Positive curves up, negative curves down; zero keeps the text straight. Outlines and shadows follow the glyphs.
+
+Static curves retain existing meshes and batching; angle animation regenerates TMP geometry. See [curve performance measurements](Assets/SDFImage/Documentation~/Performance-0.10.0.md).
 
 | Layer setting | Result | Relative to the text face |
 | --- | --- | --- |

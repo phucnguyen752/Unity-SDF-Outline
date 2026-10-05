@@ -26,7 +26,7 @@ This URL follows the `upm` branch. After each release, select **SDF Outline** (o
 
 SDF Outline includes the **SDF Image** and **SDF Text** components. The package ID (`com.sdfimage.ugui`) and installation URL remain unchanged after the library rename.
 
-To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.9.0`. Clicking **Update** while using this tag will not switch to a newer release tag.
+To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.0`. Clicking **Update** while using this tag will not switch to a newer release tag.
 
 The `upm` branch and version tags contain the `com.sdfimage.ugui` package at the repository root; no `?path=` is needed. The `main` branch contains the full Unity project, with the library in `Assets/SDFImage`. Keep `#upm` in the URL because the default `main` branch does not have a package at its root.
 
@@ -55,6 +55,12 @@ All three examples use **Intensity 0.5** and **Opacity 1**; the outline follows 
 The legacy `SdfAutoBake` component is retained so older prefabs still load. Image adopts its saved source; **Remove Legacy Auto Bake** in the Inspector removes the redundant helper with Undo support. New objects do not need this helper.
 
 ## SDF Text quick start
+
+For an arched title, enable **SDF Text Curve → Curve Enabled** and adjust **Curve Angle**. Try **30°** for a gentle arch like a win banner. Positive angles arch up, negative angles curve down, and zero is straight; the range is -180° to 180°. Curving is disabled by default and works independently of Effects Enabled. Each line curves around its own center baseline, with rigid glyph rotation and matching outlines, shadows and fallback font meshes. From code, set `label.CurveEnabled = true; label.CurveAngle = 30;` — both properties refresh automatically.
+
+TMP still calculates wrapping, alignment, preferred size and line spacing from the straight text. Leave room in the RectTransform (and any parent mask) for the curved result. Underline, strikethrough and highlight decorations retain TMP's straight layout.
+
+Curvature runs only when TMP regenerates its mesh. Static labels retain their existing meshes and batching; changing the angle regenerates glyph and effect geometry. See the [curve performance measurements](Documentation~/Performance-0.10.0.md).
 
 1. Create **GameObject → UI → SDF Text**. The `SdfText` component derives from `TextMeshProUGUI` and keeps the standard TMP Inspector for content, font, font size, alignment, spacing, auto size and rich text.
 2. Assign a TMP font with an SDF atlas. There is no need to Generate SDF or bake text into sprites.
