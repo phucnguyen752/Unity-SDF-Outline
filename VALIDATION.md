@@ -1,5 +1,26 @@
 # Validation
 
+## 0.10.0 — curved SDF Text (2026-10-05)
+
+Validated through isolated Unity **6000.0.83f1** fixtures using the local UPM package. Unrelated development scenes, project settings and user assets are excluded from the package release.
+
+| Check | Result |
+| --- | --- |
+| Built-in pipeline, Gamma | **171 / 171 EditMode tests passed**, zero skipped, 33.041 s |
+| URP 17.0.4, Linear | **171 / 171 EditMode tests passed**, zero skipped, 36.207 s |
+| Android Image/Text shader bundle, Vulkan and OpenGL ES 3 | **Passed**, fresh strict shader bundle build |
+| Windows Player script compilation | **18 runtime assemblies**, including SDFUI/TMP; no package Editor/test assemblies |
+| Windows Development Player curve benchmark | **Built and completed**, Mono / D3D11, no runtime exceptions |
+| Curve callback allocation probe | **0 managed bytes / 10,000 warmed calls** |
+
+Ten added curve cases cover signed and extreme angles, rigid glyph rotation, repeated rebuild and enable, zero/disabled restoration, fallback effect meshes on both sides, multiple lines/blank lines, whitespace and content changes, mixed serialized values/Undo, a rendered GOOD JOB! title, and unchanged idle Canvas cycles. Both full suites retain the earlier image/import/layer/mask/batching tests.
+
+For 100 labels with three Normal layers, curved and straight text each retain **2 draw calls**, 200 renderer-reported meshes, **1,766,400 mesh bytes** and 8,800 triangles. Curving adds about **0.259 ms** when every label changes content each frame. Static text does not run the curve callback; angle animation regenerates TMP/effect geometry. Whole-frame dynamic allocation counters are identical for curved and straight text. See [measurements and raw data](Documentation~/Performance-0.10.0.md) for scope and limits.
+
+Reports: [Built-in Gamma](Documentation~/Tests-0.10.0-Builtin.xml), [URP Linear](Documentation~/Tests-0.10.0-URP-Linear.xml). Build and benchmark logs remain in the development project's ignored Build directory.
+
+No Android/iOS device run, mobile FPS/GPU timing, thermal or battery measurements were performed. The Windows benchmark exercises runtime API updates and rendering; automated Inspector/Undo checks do not establish mouse-driven interaction coverage. Preferred size/wrapping and text decorations retain TMP's straight layout.
+
 ## 0.9.0 — SDF Outline and image material batching (2026-09-17)
 
 Validated through a local UPM installation in an isolated Unity **6000.0.83f1** project. Runtime image sources were hash-checked against the completed Windows benchmark; release metadata, demo menu and documentation were then updated. Unrelated development scenes, project settings and user assets are excluded.

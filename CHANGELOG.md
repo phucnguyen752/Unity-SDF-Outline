@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 — 2026-10-05
+
+- Add optional curved SDF Text with Curve Enabled and a signed Curve Angle (-180° to 180°). Positive angles arch up; negative angles curve down. Rotate glyphs rigidly around each line's center baseline and preserve matching outline, shadow and fallback-font geometry.
+- Expose CurveEnabled and CurveAngle APIs with automatic refresh. Support mixed Inspector values and Undo; leave curvature disabled by default for existing labels.
+- Apply curvature only during TMP mesh generation, reuse existing meshes/materials and avoid per-glyph allocations. Cache the inverse radius per line and use multiplication for the squared sine term.
+- Add regression coverage for signed angles, repeated rebuild/enable, zero/disabled restoration, multiline/content changes, fallback effects, title rendering and unchanged idle Canvas cycles. Document straight-layout sizing and decoration limits.
+
 ## 0.9.0 — 2026-09-17
 
 - Rename the library to SDF Outline in Package Manager, documentation and the Tools menu. Preserve the package ID, installation URL, SDF Image/SDF Text components, assemblies and asset GUIDs for existing projects.

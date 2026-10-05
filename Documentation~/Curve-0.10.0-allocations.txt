@@ -1,0 +1,1 @@
+calls=10000 glyphs=10 allocatedBytes=0 elapsedMs=35.6057

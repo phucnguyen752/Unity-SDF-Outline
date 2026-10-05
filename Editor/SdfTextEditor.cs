@@ -13,6 +13,7 @@ namespace SDFUI.Editor
     public sealed class SdfTextEditor : TMP_EditorPanelUI
     {
         private SerializedProperty effectsEnabled, layers, layerCount;
+        private SerializedProperty curveEnabled, curveAngle;
         private ReorderableList layerList;
         private UnityEditor.Editor fontMaterialEditor;
         private readonly List<Object> fontMaterials = new List<Object>();
@@ -23,6 +24,8 @@ namespace SDFUI.Editor
             foreach (SdfText text in targets) _ = text.Layers;
             serializedObject.Update();
             effectsEnabled = serializedObject.FindProperty("sdfEffectsEnabled");
+            curveEnabled = serializedObject.FindProperty("sdfCurveEnabled");
+            curveAngle = serializedObject.FindProperty("sdfCurveAngle");
             layers = serializedObject.FindProperty("sdfLayers");
             layerCount = serializedObject.FindProperty("sdfLayers.Array.size");
             // Unity's multi-object array move copies one target's values to the others.
@@ -50,6 +53,14 @@ namespace SDFUI.Editor
         {
             base.OnInspectorGUI();
             serializedObject.Update();
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("SDF Text Curve", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                if (ToggleSection(curveEnabled, "Curve Enabled"))
+                    EditorGUILayout.PropertyField(curveAngle, new GUIContent("Curve Angle",
+                        "Total arc angle per line in degrees. Positive arches up, negative curves down, zero is straight. Try 30 for a gentle title arc."));
+            }
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("SDF Effects", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Inner and Center borders and Inner underlays draw over the text; Outer and Normal underlays draw below it. " +

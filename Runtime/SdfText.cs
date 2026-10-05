@@ -12,6 +12,8 @@ namespace SDFUI
         [SerializeField] private bool sdfEffectsEnabled = true;
         [SerializeField] private List<SdfTextEffect> sdfLayers = new List<SdfTextEffect>();
         [SerializeField, HideInInspector] private bool sdfLayersMigrated;
+        [SerializeField] private bool sdfCurveEnabled;
+        [SerializeField, Range(-180, 180)] private float sdfCurveAngle = 30;
 
         // Keep legacy fields serialized so existing scenes and prefab overrides can migrate.
         [SerializeField, HideInInspector] private bool sdfOutlineEnabled = true;
@@ -73,6 +75,9 @@ namespace SDFUI
         public bool EffectsEnabled { get => sdfEffectsEnabled; set { if (sdfEffectsEnabled == value) return; sdfEffectsEnabled = value; RefreshEffects(); } }
         /// <summary>Frontmost effect first within each side of the text. Call RefreshEffects after editing.</summary>
         public List<SdfTextEffect> Layers { get { MigrateLayers(); return sdfLayers; } }
+        public bool CurveEnabled { get => sdfCurveEnabled; set { if (sdfCurveEnabled == value) return; sdfCurveEnabled = value; RefreshEffects(); } }
+        /// <summary>Total arc angle per line in degrees. Positive arches up; zero is straight.</summary>
+        public float CurveAngle { get => sdfCurveAngle; set { value = Mathf.Clamp(Finite(value), -180, 180); if (sdfCurveAngle == value) return; sdfCurveAngle = value; RefreshEffects(); } }
 
         // Released scalar APIs follow their original layers even when the list is reordered.
         public bool OutlineEnabled { get => LegacyLayer(SdfTextEffectRole.Outline, false)?.Enabled ?? false; set { LegacyLayer(SdfTextEffectRole.Outline, true).Enabled = value; RefreshEffects(); } }
@@ -104,6 +109,7 @@ namespace SDFUI
             cachedObject = gameObject;
             SdfTextMaterials.WatchChanges();
             MigrateLayers();
+            OnPreRenderText += CurveText;
             base.OnEnable();
             paddingCache.Clear();
             foreach (var mesh in innerMeshes) Release(mesh);
@@ -120,6 +126,7 @@ namespace SDFUI
 
         protected override void OnDisable()
         {
+            OnPreRenderText -= CurveText;
             Canvas.preWillRenderCanvases -= CheckEffects;
             Canvas.willRenderCanvases -= SyncScale;
             if (effectRoot) effectRoot.gameObject.SetActive(false);
@@ -131,6 +138,7 @@ namespace SDFUI
 
         protected override void OnDestroy()
         {
+            OnPreRenderText -= CurveText;
             Canvas.preWillRenderCanvases -= CheckEffects;
             Canvas.willRenderCanvases -= SyncScale;
             DestroyRoot(ref effectRoot);
@@ -170,6 +178,7 @@ namespace SDFUI
 #if UNITY_EDITOR
         protected override void OnValidate()
         {
+            sdfCurveAngle = Mathf.Clamp(Finite(sdfCurveAngle), -180, 180);
             MigrateLayers();
             foreach (var layer in sdfLayers) layer?.Sanitize();
             base.OnValidate();
@@ -246,6 +255,54 @@ namespace SDFUI
             geometryVersion++;
             lastLossyScaleY = rectTransform.lossyScale.y;
             SyncEffects();
+        }
+
+        private void CurveText(TMP_TextInfo info)
+        {
+            if (!sdfCurveEnabled || Mathf.Abs(sdfCurveAngle) < 0.001f) return;
+            float arc = sdfCurveAngle * Mathf.Deg2Rad;
+            for (int lineIndex = 0; lineIndex < info.lineCount; lineIndex++)
+            {
+                var line = info.lineInfo[lineIndex];
+                if (line.visibleCharacterCount < 2) continue;
+                // Advances are independent of SDF padding, so effects never change the arc.
+                float left = info.characterInfo[line.firstVisibleCharacterIndex].origin;
+                float right = info.characterInfo[line.lastVisibleCharacterIndex].xAdvance;
+                float width = right - left;
+                if (width <= 0.001f) continue;
+                float center = (left + right) * 0.5f;
+                float radius = width / arc;
+                float inverseRadius = arc / width;
+                for (int i = line.firstCharacterIndex; i <= line.lastCharacterIndex; i++)
+                {
+                    var character = info.characterInfo[i];
+                    if (!character.isVisible) continue;
+                    var vertices = info.meshInfo[character.materialReferenceIndex].vertices;
+                    int start = character.vertexIndex;
+                    float x = (vertices[start].x + vertices[start + 2].x) * 0.5f;
+                    float angle = (x - center) * inverseRadius;
+                    float sin = Mathf.Sin(angle), cos = Mathf.Cos(angle);
+                    float halfSin = Mathf.Sin(angle * 0.5f);
+                    var pivot = new Vector3(x, line.baseline, 0);
+                    // Keep the center baseline fixed and rotate each glyph as a rigid quad.
+                    var curvedPivot = new Vector3(center + radius * sin,
+                        line.baseline - 2 * radius * halfSin * halfSin, 0);
+                    for (int vertex = start; vertex < start + 4; vertex++)
+                        vertices[vertex] = CurveVertex(vertices[vertex], pivot, curvedPivot, sin, cos);
+                    character.bottomLeft = CurveVertex(character.bottomLeft, pivot, curvedPivot, sin, cos);
+                    character.topLeft = CurveVertex(character.topLeft, pivot, curvedPivot, sin, cos);
+                    character.topRight = CurveVertex(character.topRight, pivot, curvedPivot, sin, cos);
+                    character.bottomRight = CurveVertex(character.bottomRight, pivot, curvedPivot, sin, cos);
+                    info.characterInfo[i] = character;
+                }
+            }
+        }
+
+        private static Vector3 CurveVertex(Vector3 vertex, Vector3 pivot, Vector3 curvedPivot, float sin, float cos)
+        {
+            Vector3 offset = vertex - pivot;
+            return curvedPivot + new Vector3(offset.x * cos + offset.y * sin,
+                -offset.x * sin + offset.y * cos, offset.z);
         }
 
         private void RestoreNativePadding()

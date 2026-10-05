@@ -1,12 +1,12 @@
 {
   "name": "com.sdfimage.ugui",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "displayName": "SDF Outline",
   "author": {
     "name": "Phuc Nguyen",
     "url": "https://github.com/phucnguyen752"
   },
-  "description": "SDF outlines and soft shadows for uGUI sprites and TextMeshPro text, with automatic asynchronous sprite baking.",
+  "description": "SDF outlines and soft shadows for uGUI sprites and curved TextMeshPro text, with automatic asynchronous sprite baking.",
   "unity": "6000.0",
   "dependencies": { "com.unity.ugui": "2.0.0" },
   "samples": [

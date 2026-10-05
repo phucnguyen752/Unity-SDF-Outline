@@ -84,6 +84,213 @@ namespace SDFUI.Tests
             generatedFonts.Clear();
         }
 
+        [TestCase(30f)]
+        [TestCase(-30f)]
+        [TestCase(180f)]
+        [TestCase(-180f)]
+        public void Curve_RotatesRigidGlyphsInBothDirectionsAndRestoresStraightText(float angle)
+        {
+            SdfText text = CreateText(canvas.transform, "AAAAA");
+            text.characterSpacing = 0;
+            text.fontSize = 36;
+            text.ForceMeshUpdate();
+            Vector3[] straight = (Vector3[])text.textInfo.meshInfo[0].vertices.Clone();
+            text.CurveAngle = angle;
+            text.CurveEnabled = true;
+            text.ForceMeshUpdate();
+            Vector3[] curved = (Vector3[])text.textInfo.meshInfo[0].vertices.Clone();
+            Assert.That(curved, Is.Not.EqualTo(straight));
+            int first = text.textInfo.characterInfo[0].vertexIndex;
+            int middle = text.textInfo.characterInfo[2].vertexIndex;
+            int last = text.textInfo.characterInfo[4].vertexIndex;
+            Assert.That((curved[first + 3].y - curved[first].y) * angle, Is.GreaterThan(0),
+                "The left glyph must tilt up toward the center for a positive arch.");
+            Assert.That((curved[last + 3].y - curved[last].y) * angle, Is.LessThan(0));
+            Assert.That((curved[middle].y - curved[first].y) * angle, Is.GreaterThan(0));
+            for (int i = 0; i < text.textInfo.characterCount; i++)
+            {
+                int start = text.textInfo.characterInfo[i].vertexIndex;
+                Assert.That(Vector3.Distance(curved[start], curved[start + 1]),
+                    Is.EqualTo(Vector3.Distance(straight[start], straight[start + 1])).Within(0.001f));
+                Assert.That(Vector3.Distance(curved[start], curved[start + 3]),
+                    Is.EqualTo(Vector3.Distance(straight[start], straight[start + 3])).Within(0.001f));
+            }
+            text.ForceMeshUpdate();
+            CollectionAssert.AreEqual(curved, text.textInfo.meshInfo[0].vertices, "Rebuild must not accumulate curvature.");
+            text.enabled = false;
+            text.enabled = true;
+            text.ForceMeshUpdate();
+            CollectionAssert.AreEqual(curved, text.textInfo.meshInfo[0].vertices, "Re-enable must not duplicate the curve callback.");
+            text.CurveAngle = 0;
+            text.ForceMeshUpdate();
+            CollectionAssert.AreEqual(straight, text.textInfo.meshInfo[0].vertices);
+            text.CurveAngle = angle;
+            text.CurveEnabled = false;
+            text.ForceMeshUpdate();
+            CollectionAssert.AreEqual(straight, text.textInfo.meshInfo[0].vertices);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Curve_EffectMeshesMatchCurvedFacesAcrossFallbackFonts(bool fallbackFont)
+        {
+            SdfText text = CreateText(canvas.transform, "AVAVA");
+            if (fallbackFont)
+            {
+                TMP_FontAsset primary = CreateFont("A"), fallback = CreateFont("V");
+                primary.fallbackFontAssetTable = new List<TMP_FontAsset> { fallback };
+                text.font = primary;
+            }
+            text.fontSize = 36;
+            text.characterSpacing = 0;
+            text.CurveEnabled = true;
+            text.CurveAngle = 50;
+            Color[] face = Render();
+            text.Layers.Clear();
+            text.Layers.Add(new SdfTextEffect { Position = SdfOutlinePosition.Outer, Width = 3, Color = Color.cyan });
+            text.Layers.Add(new SdfTextEffect { Position = SdfOutlinePosition.Center, Width = 1, Color = Color.blue });
+            text.Layers.Add(new SdfTextEffect { Offset = new Vector2(2, -3), Color = Color.blue });
+            text.RefreshEffects();
+            Color[] effects = Render();
+            SaveCapture("tmp-curved-text-" + fallbackFont + ".png", effects);
+            Assert.That(CountExteriorEffect(face, effects), Is.GreaterThan(50));
+            int checkedLayers = 0;
+            foreach (SdfTextLayer layer in canvas.GetComponentsInChildren<SdfTextLayer>())
+            {
+                Mesh mesh = layer.canvasRenderer.GetMesh();
+                if (layer.Owner != text || !mesh || mesh.vertexCount == 0) continue;
+                Mesh faceMesh = text.canvasRenderer.GetMesh();
+                foreach (TMP_SubMeshUI sub in text.GetComponentsInChildren<TMP_SubMeshUI>())
+                    if (sub.sharedMaterial.mainTexture == layer.mainTexture) faceMesh = sub.canvasRenderer.GetMesh();
+                Vector3[] source = faceMesh.vertices, actual = mesh.vertices;
+                // The single-atlas below mesh merges outer and shifted shadow geometry.
+                for (int i = 0; i < actual.Length; i++)
+                {
+                    Vector3 delta = actual[i] - source[i % source.Length];
+                    bool same = delta.sqrMagnitude < 0.0001f;
+                    bool shifted = (delta - new Vector3(2, -3, 0)).sqrMagnitude < 0.0001f;
+                    Assert.That(same || shifted, Is.True, "Effects must use the curved face geometry.");
+                }
+                checkedLayers++;
+            }
+            Assert.That(checkedLayers, Is.EqualTo(fallbackFont ? 6 : 2));
+        }
+
+        [Test]
+        public void Curve_IdleCanvasDoesNotRebuildAndChangingAngleKeepsRendererCount()
+        {
+            SdfText text = CreateText(canvas.transform, "GOOD JOB!");
+            text.fontSize = 34;
+            text.CurveEnabled = true;
+            text.Layers.Clear();
+            text.Layers.Add(new SdfTextEffect { Width = 2, Color = Color.blue });
+            text.Layers.Add(new SdfTextEffect { Width = 4, Offset = new Vector2(0, -3) });
+            text.RefreshEffects();
+            Render();
+            int rebuilds = 0;
+            text.OnPreRenderText += _ => rebuilds++;
+            Mesh face = text.mesh;
+            SdfTextLayer effect = OnlyEffect(text);
+            int effectVertices = effect.canvasRenderer.GetMesh().vertexCount;
+            Vector3[] curved = face.vertices;
+            for (int i = 0; i < 30; i++) Canvas.ForceUpdateCanvases();
+            Assert.That(rebuilds, Is.Zero, "Unchanged curved text must not regenerate on idle Canvas cycles.");
+            text.CurveAngle = text.CurveAngle;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(rebuilds, Is.Zero, "Assigning the same angle must not dirty the text.");
+            Assert.That(text.mesh, Is.SameAs(face));
+            Assert.That(OnlyEffect(text), Is.SameAs(effect));
+            text.CurveAngle = -45;
+            Render();
+            Assert.That(rebuilds, Is.EqualTo(1));
+            Assert.That(face.vertices, Is.Not.EqualTo(curved));
+            Assert.That(text.mesh, Is.SameAs(face));
+            Assert.That(OnlyEffect(text), Is.SameAs(effect));
+            Assert.That(effect.canvasRenderer.GetMesh().vertexCount, Is.EqualTo(effectVertices));
+            AssertActiveEffects(text, 1, 2);
+        }
+
+        [Test]
+        public void Curve_TitleRendersWithOutlineAndShadow()
+        {
+            SdfText text = CreateText(canvas.transform, "GOOD JOB!");
+            text.fontSize = 34;
+            text.fontStyle = FontStyles.Bold;
+            text.characterSpacing = 0;
+            text.CurveEnabled = true;
+            text.CurveAngle = 30;
+            Color[] face = Render();
+            text.Layers.Clear();
+            text.Layers.Add(new SdfTextEffect { Position = SdfOutlinePosition.Outer, Width = 2, Color = Color.cyan });
+            text.Layers.Add(new SdfTextEffect { Position = SdfOutlinePosition.Outer, Width = 4, Color = Color.blue });
+            text.Layers.Add(new SdfTextEffect { Width = 4, Offset = new Vector2(0, -3), Color = new Color(0, 0.15f, 0.65f, 1) });
+            text.RefreshEffects();
+            Color[] effects = Render();
+            AssertFaceUnchanged(face, effects);
+            Assert.That(CountExteriorEffect(face, effects), Is.GreaterThan(100));
+            SaveCapture("tmp-curved-good-job.png", effects);
+        }
+
+        [Test]
+        public void Curve_MultilineWhitespaceAndTextChangesRemainStable()
+        {
+            SdfText text = CreateText(canvas.transform, "AAA\n\n AAA \nA");
+            text.fontSize = 28;
+            text.characterSpacing = 0;
+            text.ForceMeshUpdate();
+            Vector3[] straight = (Vector3[])text.textInfo.meshInfo[0].vertices.Clone();
+            text.CurveEnabled = true;
+            text.CurveAngle = 60;
+            text.ForceMeshUpdate();
+            Assert.That(text.textInfo.lineCount, Is.EqualTo(4));
+            foreach (var line in text.textInfo.lineInfo)
+            {
+                if (line.visibleCharacterCount == 0) continue;
+                int first = text.textInfo.characterInfo[line.firstVisibleCharacterIndex].vertexIndex;
+                if (line.visibleCharacterCount == 1)
+                    Assert.That(text.textInfo.meshInfo[0].vertices[first], Is.EqualTo(straight[first]));
+                else
+                    Assert.That(text.textInfo.meshInfo[0].vertices[first + 3].y,
+                        Is.GreaterThan(text.textInfo.meshInfo[0].vertices[first].y));
+            }
+            foreach (string value in new[] { "", "   ", "A", "<size=24>AAA</size> AAA", "GOOD JOB!" })
+            {
+                text.SetText(value);
+                text.ForceMeshUpdate();
+                foreach (var mesh in text.textInfo.meshInfo)
+                    for (int i = 0; i < mesh.vertexCount; i++)
+                        Assert.That(float.IsNaN(mesh.vertices[i].x) || float.IsInfinity(mesh.vertices[i].y), Is.False);
+            }
+        }
+
+        [Test]
+        public void Curve_InspectorSupportsMixedValuesUndoAndClampsInvalidAngles()
+        {
+            SdfText first = CreateText(canvas.transform, "AAA"), second = CreateText(canvas.transform, "BBB");
+            Assert.That(first.CurveEnabled, Is.False);
+            first.CurveEnabled = true;
+            first.CurveAngle = 45;
+            second.CurveAngle = -20;
+            var serialized = new SerializedObject(new Object[] { first, second });
+            Assert.That(serialized.FindProperty("sdfCurveEnabled").hasMultipleDifferentValues, Is.True);
+            Assert.That(serialized.FindProperty("sdfCurveAngle").hasMultipleDifferentValues, Is.True);
+            Undo.IncrementCurrentGroup();
+            serialized.FindProperty("sdfCurveAngle").floatValue = 60;
+            serialized.ApplyModifiedProperties();
+            Undo.FlushUndoRecordObjects();
+            Assert.That(first.CurveAngle, Is.EqualTo(60));
+            Assert.That(second.CurveAngle, Is.EqualTo(60));
+            Undo.PerformUndo();
+            Assert.That(first.CurveAngle, Is.EqualTo(45));
+            Assert.That(second.CurveAngle, Is.EqualTo(-20));
+            first.CurveAngle = float.NaN;
+            Assert.That(first.CurveAngle, Is.Zero);
+            first.CurveAngle = 999;
+            Assert.That(first.CurveAngle, Is.EqualTo(180));
+            first.CurveAngle = -999;
+            Assert.That(first.CurveAngle, Is.EqualTo(-180));
+        }
+
         [Test]
         public void CloselySpacedGlyphs_ThickOutlineNeverPaintsOverAnyGlyphFace()
         {
