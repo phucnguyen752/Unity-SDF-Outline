@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1 — 2026-10-06
+
+- Fix SDF Image outlines and shadows disappearing when Inspector edits finish and Prefab Mode saves the asset. Restore transient layer arrays when the Editor reuses a cached material, including retained stencil variants.
+- Add Prefab Mode regression coverage for Inspector repaint, selection, serialized layer edits, saving and reopening. Keep player material-cache behavior unchanged.
+
 ## 0.10.0 — 2026-10-05
 
 - Add optional curved SDF Text with Curve Enabled and a signed Curve Angle (-180° to 180°). Positive angles arch up; negative angles curve down. Rotate glyphs rigidly around each line's center baseline and preserve matching outline, shadow and fallback-font geometry.

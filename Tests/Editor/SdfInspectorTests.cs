@@ -123,6 +123,124 @@ namespace SDFUI.Tests
         }
 
         [UnityTest]
+        public IEnumerator PrefabMode_SelectEditAndReopen_PreservesImageEffects()
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null || !SystemInfo.supportsAsyncGPUReadback)
+                Assert.Ignore("Generation requires an Editor graphics device with asynchronous GPU readback.");
+
+            var settings = SdfTextureSettings.Get(sourcePath);
+            settings.enabled = true;
+            SdfTextureSettings.Set(sourcePath, settings);
+            double deadline = EditorApplication.timeSinceStartup + 30;
+            Sprite source = null;
+            while (EditorApplication.timeSinceStartup < deadline)
+            {
+                source = AssetDatabase.LoadAssetAtPath<Sprite>(sourcePath);
+                if (SdfSprite.FromSprite(source)) break;
+                yield return null;
+            }
+            Assert.That(SdfSprite.FromSprite(source), Is.Not.Null);
+
+            var root = new GameObject("Prefab Canvas", typeof(RectTransform), typeof(Canvas));
+            SceneManager.MoveGameObjectToScene(root, previewScene);
+            root.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            component.gameObject.hideFlags = HideFlags.None;
+            component.transform.SetParent(root.transform, false);
+            component.sprite = source;
+            component.rectTransform.sizeDelta = new Vector2(64, 64);
+            component.Layers.RemoveAt(1);
+            component.Layers[0].Color = Color.red;
+            component.Layers[0].Width = 5;
+            component.RefreshEffects();
+            string prefabPath = folder + "/Image.prefab";
+            Assert.That(PrefabUtility.SaveAsPrefabAsset(component.gameObject, prefabPath), Is.Not.Null);
+            var previousSelection = Selection.activeObject;
+            ImageInspectorWindow window = null;
+            try
+            {
+                for (int reopen = 0; reopen < 2; reopen++)
+                {
+                    var stage = PrefabStageUtility.OpenPrefab(prefabPath);
+                    // Switching stages can replace the Editor layout and destroy a window's HostView.
+                    window = ScriptableObject.CreateInstance<ImageInspectorWindow>();
+                    window.position = new Rect(0, 0, 500, 1000);
+                    window.ShowUtility();
+                    var image = stage.prefabContentsRoot.GetComponentInChildren<SdfImage>();
+                    for (int select = 0; select < 3; select++)
+                    {
+                        Selection.activeGameObject = image.gameObject;
+                        inspector = UnityEditor.Editor.CreateEditor(image);
+                        window.inspector = inspector;
+                        window.SendEvent(new Event { type = EventType.Layout });
+                        window.SendEvent(new Event { type = EventType.Repaint });
+                        Assert.That(window.failure, Is.Null);
+                        yield return Settle();
+                        Canvas.ForceUpdateCanvases();
+                        var material = image.canvasRenderer.GetMaterial(0);
+                        Assert.That(material, Is.Not.Null);
+                        Assert.That(image.Layers.Count, Is.EqualTo(1));
+                        Assert.That(image.Layers[0].Width, Is.EqualTo(5 + reopen));
+                        Assert.That(material.shader.name, Is.EqualTo("UI/SDF Image"));
+                        Assert.That(material.GetInt("_LayerCount"), Is.EqualTo(1));
+                        Assert.That(material.GetVectorArray("_LayerSizes")[0].z, Is.EqualTo(5 + reopen));
+                        Object.DestroyImmediate(inspector);
+                        inspector = null;
+                        window.inspector = null;
+                        Selection.activeObject = null;
+                        yield return Settle();
+                    }
+                    var fields = new SerializedObject(image);
+                    fields.FindProperty("sdfLayers").GetArrayElementAtIndex(0).FindPropertyRelative("width").floatValue = 6;
+                    fields.ApplyModifiedProperties();
+                    image.RefreshEffects();
+                    Undo.FlushUndoRecordObjects();
+                    var savePrefab = typeof(PrefabStage).GetMethod("SavePrefab", BindingFlags.Instance | BindingFlags.NonPublic);
+                    Assert.That(savePrefab, Is.Not.Null);
+                    Assert.That(savePrefab.Invoke(stage, null), Is.True);
+                    yield return Settle();
+                    Canvas.ForceUpdateCanvases();
+                    Assert.That(image.canvasRenderer.GetMaterial(0), Is.Not.Null, "Saving must retain the renderer material.");
+                    Assert.That(image.canvasRenderer.GetMaterial(0).GetInt("_LayerCount"), Is.EqualTo(1));
+                    Assert.That(image.canvasRenderer.GetMaterial(0).GetVectorArray("_LayerSizes")[0].z, Is.EqualTo(6));
+                    Assert.That(image.canvasRenderer.GetMaterial(0).GetVectorArray("_LayerColors")[0], Is.EqualTo((Vector4)Color.red));
+                    window.Close();
+                    window = null;
+                    StageUtility.GoToMainStage();
+                }
+            }
+            finally
+            {
+                if (inspector) Object.DestroyImmediate(inspector);
+                inspector = null;
+                if (window)
+                {
+                    window.inspector = null;
+                    window.Close();
+                }
+                StageUtility.GoToMainStage();
+                Selection.activeObject = previousSelection;
+            }
+        }
+
+        private sealed class ImageInspectorWindow : EditorWindow
+        {
+            public UnityEditor.Editor inspector;
+            public Exception failure;
+
+            private void OnGUI()
+            {
+                if (!inspector) return;
+                try
+                {
+                    inspector.OnInspectorGUI();
+                    inspector.OnPreviewGUI(GUILayoutUtility.GetRect(200, 200), GUIStyle.none);
+                }
+                catch (ExitGUIException) { throw; }
+                catch (Exception exception) { failure = exception; }
+            }
+        }
+
+        [UnityTest]
         public IEnumerator CustomInspector_SourceAssignmentUndoAndGenerate_UseTheSameImageComponent()
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null || !SystemInfo.supportsAsyncGPUReadback)

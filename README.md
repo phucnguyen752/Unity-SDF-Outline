@@ -26,7 +26,7 @@ This URL follows the `upm` branch. After each release, select **SDF Outline** (o
 
 SDF Outline includes the **SDF Image** and **SDF Text** components. The package ID (`com.sdfimage.ugui`) and installation URL remain unchanged after the library rename.
 
-To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.0`. Clicking **Update** while using this tag will not switch to a newer release tag.
+To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.1`. Clicking **Update** while using this tag will not switch to a newer release tag.
 
 The `upm` branch and version tags contain the `com.sdfimage.ugui` package at the repository root; no `?path=` is needed. The `main` branch contains the full Unity project, with the library in `Assets/SDFImage`. Keep `#upm` in the URL because the default `main` branch does not have a package at its root.
 
