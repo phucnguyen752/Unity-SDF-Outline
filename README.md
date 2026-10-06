@@ -16,7 +16,7 @@ https://github.com/phucnguyen752/sdf-image.git#upm
 
 Select **SDF Outline → Update** for later releases. An older installation may still appear as **SDF Image** until updated. The library name changed in **0.9.0**; the package ID `com.sdfimage.ugui`, component names, script GUIDs and installation URL are unchanged.
 
-For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.0`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
+For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.1`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
 
 ## SDF Image: start with a sprite
 

@@ -1,5 +1,21 @@
 # Validation
 
+## 0.10.1 — Prefab Mode image effect persistence (2026-10-06)
+
+Validated through isolated Unity **6000.0.83f1** fixtures using the local UPM package. Unrelated development scenes, project settings and user assets are excluded from the release.
+
+| Check | Result |
+| --- | --- |
+| Built-in pipeline, Gamma | **172 / 172 EditMode tests passed**, zero skipped, 37.486 s |
+| URP 17.0.4, Linear | **172 / 172 EditMode tests passed**, zero skipped, 39.450 s |
+| Windows Player script compilation | **18 runtime assemblies**, including SDFUI/TMP; no package Editor/test assemblies |
+
+The Prefab Mode regression failed before the fix: saving left the shader and layer count intact but removed the material's transient layer arrays. The corrected cache restores those arrays when reusing an Editor material, including retained stencil derivatives. The test checks Inspector repaint and preview, selection, serialized width edits, Undo record flushing, native PrefabStage saving, color/width retention and reopening. Both full suites retain the existing image/import/text/rendering/mask/material-sharing checks.
+
+The added cache refresh is compiled only for the Editor; player material-cache behavior is unchanged. Existing performance reports remain historical evidence. Shader sources are unchanged in this patch, so Android shader bundles and performance benchmarks were not rerun. No complete player build or device validation was performed for this release; automated Inspector events do not establish mouse-driven interaction coverage in a consumer project.
+
+Reports: [Built-in Gamma](Documentation~/Tests-0.10.1-Builtin.xml), [URP Linear](Documentation~/Tests-0.10.1-URP-Linear.xml). Player compilation logs remain in the development project's ignored Build directory.
+
 ## 0.10.0 — curved SDF Text (2026-10-05)
 
 Validated through isolated Unity **6000.0.83f1** fixtures using the local UPM package. Unrelated development scenes, project settings and user assets are excluded from the package release.

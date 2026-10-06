@@ -59,6 +59,11 @@ namespace SDFUI
                 Array.Copy(layerSizes, sizes, count);
                 Array.Copy(layerColors, colors, count);
                 Array.Copy(layerModes, modes, count);
+                ApplyProperties();
+            }
+
+            internal void ApplyProperties()
+            {
                 Apply(material);
                 foreach (var stencil in stencilMaterials) Apply(stencil);
             }
@@ -115,7 +120,13 @@ namespace SDFUI
             int count, Vector4[] sizes, Vector4[] colors, Vector4[] modes, ref Entry current)
         {
             if (current != null && current.Matches(color, distance, properties, count, sizes, colors, modes))
+            {
+#if UNITY_EDITOR
+                // Prefab saves serialize materials without their runtime vector arrays.
+                current.ApplyProperties();
+#endif
                 return current.material;
+            }
             int hash;
             unchecked
             {
@@ -133,6 +144,9 @@ namespace SDFUI
             for (; candidate != null; candidate = candidate.next)
                 if (candidate.Matches(color, distance, properties, count, sizes, colors, modes))
                 {
+#if UNITY_EDITOR
+                    candidate.ApplyProperties();
+#endif
                     candidate.users++;
                     Release(ref current, true);
                     current = candidate;
