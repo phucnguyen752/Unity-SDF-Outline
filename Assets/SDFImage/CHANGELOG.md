@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 — 2026-10-08
+
+- Add an optional Ignore Component Alpha checkbox and API to SDF Image and SDF Text. Outline, shadow and glow keep their own opacity when component Color alpha reaches zero; CanvasGroup and CanvasRenderer fades still apply.
+- Keep shared alpha enabled by default for existing scenes and prefabs. Text effects also ignore rich-text and gradient vertex alpha when the option is enabled; font material Face Color alpha still applies.
+- Prevent Center image borders from blending the same layer twice at the inner/outer join when the fill is transparent.
+- Add nine GPU rendering regression cases covering Outer, Inner and Center outlines, zero/partial image alpha, effect opacity, toggling and CanvasGroup fades.
+
 ## 0.10.1 — 2026-10-06
 
 - Fix SDF Image outlines and shadows disappearing when Inspector edits finish and Prefab Mode saves the asset. Restore transient layer arrays when the Editor reuses a cached material, including retained stencil variants.

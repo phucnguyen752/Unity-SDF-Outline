@@ -16,7 +16,7 @@ https://github.com/phucnguyen752/sdf-image.git#upm
 
 Select **SDF Outline → Update** for later releases. An older installation may still appear as **SDF Image** until updated. The library name changed in **0.9.0**; the package ID `com.sdfimage.ugui`, component names, script GUIDs and installation URL are unchanged.
 
-For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.1`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
+For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.11.0`. A pinned tag does not advance to a new release when you click Update; reinstall once with `#upm` to follow releases. Keep the suffix: `main` is the development project, while `upm` and version tags have the package at their root.
 
 ## SDF Image: start with a sprite
 
@@ -28,6 +28,8 @@ For a pinned version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.1
 Up to **16 layers** are composed in one quad. Use Underlay for an offset shadow or a soft glow. Standard Image tint, alpha, Simple/Sliced, preserve aspect, masks and CanvasGroup remain available. Editing effects does not rebake the sprite.
 
 Enable **Use Texture Color** to follow the artwork's edge colors. **Intensity** changes brightness (`0` black, `1` original, above `1` brighter); **Opacity** changes transparency.
+
+Enable **SDF Effects → Ignore Component Alpha** on SDF Image or SDF Text to keep outline, shadow and glow opacity independent of component Color alpha, including at zero. Disabled by default; CanvasGroup and CanvasRenderer fades still apply. From code, set `IgnoreComponentAlpha = true` on either component.
 
 ![Texture-colored effects on a gradient star, hollow ring and sliced panel](Assets/SDFImage/Documentation~/sdf-outline-texture-color-demo.png)
 

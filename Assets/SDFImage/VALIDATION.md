@@ -1,5 +1,22 @@
 # Validation
 
+## 0.11.0 — independent effect alpha (2026-10-08)
+
+Validated through isolated Unity **6000.0.83f1** fixtures using the local UPM package. Unrelated development scenes, settings and user assets are excluded from the release.
+
+| Check | Result |
+| --- | --- |
+| Built-in pipeline, Gamma | **181 / 181 EditMode tests passed**, zero skipped, 36.385 s |
+| URP 17.0.4, Linear | **181 / 181 EditMode tests passed**, zero skipped, 39.887 s |
+| Android Image/Text shader bundle, Vulkan and OpenGL ES 3 | **Passed**, fresh strict shader bundle build |
+| Windows Player script compilation | **18 runtime assemblies**, including SDFUI/TMP; no package Editor/test assemblies |
+
+Nine added GPU rendering cases cover Outer, Inner and Center outlines with independent component alpha, zero/partial image alpha, effect opacity, toggling the option and CanvasGroup fades. The Center image cases initially detected double blending at the inner/outer join with a transparent fill; the corrected shader retains the original silhouette mask for the outer join. Both complete suites retain the earlier import, prefab, text, clipping and material-sharing regressions.
+
+The option is disabled by default and applies to all effect layers. CanvasGroup and CanvasRenderer fades still apply. Text effects ignore rich-text and gradient vertex alpha while retaining font material Face Color alpha. No performance benchmark, complete player build or mobile device run was performed for this release.
+
+Reports: [Built-in Gamma](Documentation~/Tests-0.11.0-Builtin.xml), [URP Linear](Documentation~/Tests-0.11.0-URP-Linear.xml). Additional build/install logs remain in the development project's ignored Build directory.
+
 ## 0.10.1 — Prefab Mode image effect persistence (2026-10-06)
 
 Validated through isolated Unity **6000.0.83f1** fixtures using the local UPM package. Unrelated development scenes, project settings and user assets are excluded from the release.

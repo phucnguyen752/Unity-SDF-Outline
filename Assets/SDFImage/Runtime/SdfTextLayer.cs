@@ -186,10 +186,12 @@ namespace SDFUI
                         Vector4 uv = i < atlasUvs.Count ? atlasUvs[i] : Vector4.zero;
                         // The effect shader does not need TMP's packed UV0.z.
                         uv.z = style.mode;
+                        Color32 vertexColor = i < colors.Count ? colors[i] : (Color32)Color.white;
+                        if (Owner.IgnoreComponentAlpha) vertexColor.a = 255;
                         vertices.Add(new Vertex
                         {
                             position = positions[i] + shift, normal = i < normals.Count ? normals[i] : Vector3.back,
-                            color = i < colors.Count ? colors[i] : (Color32)Color.white,
+                            color = vertexColor,
                             atlas = uv, bounds = glyphBounds, style = style.parameters, effectColor = style.color
                         });
                     }

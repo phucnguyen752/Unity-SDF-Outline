@@ -389,6 +389,18 @@ namespace SDFUI
             vertices.AddVert(new Vector3(rect.xMin, rect.yMax), color, new Vector2(rect.xMin, rect.yMax));
             vertices.AddVert(new Vector3(rect.xMax, rect.yMax), color, new Vector2(rect.xMax, rect.yMax));
             vertices.AddVert(new Vector3(rect.xMax, rect.yMin), color, new Vector2(rect.xMax, rect.yMin));
+            if (sdfIgnoreComponentAlpha)
+            {
+                // Keep component alpha separate from CanvasRenderer/CanvasGroup alpha, including at zero.
+                var vertex = new UIVertex();
+                for (int i = 0; i < 4; i++)
+                {
+                    vertices.PopulateUIVertex(ref vertex, i);
+                    vertex.uv0.z = vertex.color.a / 255f;
+                    vertex.color.a = 255;
+                    vertices.SetUIVertex(vertex, i);
+                }
+            }
             vertices.AddTriangle(0, 1, 2);
             vertices.AddTriangle(2, 3, 0);
         }
@@ -409,6 +421,7 @@ namespace SDFUI
             materialProperties[7] = new Vector4(OutlineUseTextureColor ? 1 : 0, OutlineTextureColorIntensity, 0, 0);
             materialProperties[8] = new Vector4(ShadowOffset.x, ShadowOffset.y, settings.z, settings.w);
             materialProperties[9] = ShadowEnabled ? ShadowColor : Color.clear;
+            materialProperties[10] = new Vector4(sdfIgnoreComponentAlpha ? 1 : 0, 0, 0, 0);
             return PrepareLayers(rect, border);
         }
 

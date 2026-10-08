@@ -10,6 +10,7 @@ namespace SDFUI
     public sealed class SdfText : TextMeshProUGUI
     {
         [SerializeField] private bool sdfEffectsEnabled = true;
+        [SerializeField] private bool sdfIgnoreComponentAlpha;
         [SerializeField] private List<SdfTextEffect> sdfLayers = new List<SdfTextEffect>();
         [SerializeField, HideInInspector] private bool sdfLayersMigrated;
         [SerializeField] private bool sdfCurveEnabled;
@@ -73,6 +74,8 @@ namespace SDFUI
         internal List<SdfTextEffect> RenderLayers => sdfLayers;
 
         public bool EffectsEnabled { get => sdfEffectsEnabled; set { if (sdfEffectsEnabled == value) return; sdfEffectsEnabled = value; RefreshEffects(); } }
+        /// <summary>Effects keep their own opacity when text vertex alpha changes. CanvasGroup fades still apply.</summary>
+        public bool IgnoreComponentAlpha { get => sdfIgnoreComponentAlpha; set { if (sdfIgnoreComponentAlpha == value) return; sdfIgnoreComponentAlpha = value; RefreshEffects(); } }
         /// <summary>Frontmost effect first within each side of the text. Call RefreshEffects after editing.</summary>
         public List<SdfTextEffect> Layers { get { MigrateLayers(); return sdfLayers; } }
         public bool CurveEnabled { get => sdfCurveEnabled; set { if (sdfCurveEnabled == value) return; sdfCurveEnabled = value; RefreshEffects(); } }
