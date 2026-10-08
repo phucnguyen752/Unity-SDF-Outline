@@ -6,6 +6,7 @@ Shader "UI/SDF Image"
         _SdfTex ("Signed Distance (Source Pixels)", 2D) = "black" {}
         _SdfDecode ("Distance Decode Scale, Offset", Vector) = (1,0,0,0)
         [HideInInspector] _LayerCount ("Effect Layers", Float) = 0
+        [HideInInspector] _EffectOptions ("Ignore Component Alpha", Vector) = (0,0,0,0)
         _Color ("Tint", Color) = (1,1,1,1)
         _HasSprite ("Valid Sprite", Float) = 0
         _SourceSize ("Source Size, Padding, Range", Vector) = (1,1,0,1)
@@ -58,7 +59,7 @@ Shader "UI/SDF Image"
             struct appdata
             {
                 float4 vertex : POSITION;
-                float2 texcoord : TEXCOORD0;
+                float4 texcoord : TEXCOORD0;
                 fixed4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -68,6 +69,7 @@ Shader "UI/SDF Image"
                 fixed4 color : COLOR;
                 float2 localPosition : TEXCOORD0;
                 half4 mask : TEXCOORD1;
+                float componentAlpha : TEXCOORD2;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -78,6 +80,7 @@ Shader "UI/SDF Image"
             int _LayerCount;
             float4 _LayerSizes[16], _LayerColors[16], _LayerModes[16];
             float4 _SourceSize, _ImageRect, _SourceBorder, _LocalBorder, _Outline, _OutlineTextureColor, _Shadow;
+            float4 _EffectOptions;
             fixed4 _Color, _OutlineColor, _ShadowColor;
             float4 _ClipRect;
             float _UIMaskSoftnessX, _UIMaskSoftnessY, _HasSprite;
@@ -88,7 +91,8 @@ Shader "UI/SDF Image"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.localPosition = v.texcoord;
+                o.localPosition = v.texcoord.xy;
+                o.componentAlpha = v.texcoord.z;
                 o.color = v.color * _Color;
                 float2 pixelSize = o.vertex.w / abs(mul((float2x2)UNITY_MATRIX_P, _ScreenParams.xy));
                 float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
@@ -166,7 +170,7 @@ Shader "UI/SDF Image"
                 fill.rgb *= fill.a;
                 float4 behind = 0;
                 float4 inside = 0;
-                // Front to back, then composite the sprite and fade once. One quad/draw regardless of layer count.
+                // Front to back. One quad/draw regardless of layer count.
                 [loop] for (int layer = 0; layer < _LayerCount; layer++)
                 {
                     float4 style = _LayerSizes[layer]; // offset x/y, spread, softness
@@ -203,13 +207,23 @@ Shader "UI/SDF Image"
                         outerCoverage = lerp(outerCoverage, joined, saturate(outerWidth / max(sdf.y, 0.001)));
                     }
                     float outerAlpha = outerCoverage * layerDomain * tint.a;
+                    // The outer join belongs outside the original silhouette, even when the face is faded.
+                    // Otherwise Center borders would blend the same layer twice across the join.
+                    if (_EffectOptions.x > 0.5 && mode.x < 2.5) outerAlpha *= 1 - fill.a;
                     float innerAlpha = innerCoverage * tint.a;
                     behind += float4(rgb * outerAlpha, outerAlpha) * (1 - behind.a);
                     inside += float4(rgb * innerAlpha, innerAlpha) * (1 - inside.a);
                 }
                 float4 foreground = float4(inside.rgb * fill.a + fill.rgb * (1 - inside.a), fill.a);
+                if (_EffectOptions.x > 0.5)
+                {
+                    float faceAlpha = fill.a * i.componentAlpha;
+                    float innerAlpha = inside.a * fill.a;
+                    foreground = float4(inside.rgb * fill.a + fill.rgb * i.componentAlpha * (1 - inside.a),
+                        innerAlpha + faceAlpha * (1 - inside.a));
+                }
                 float4 result = foreground + behind * (1 - foreground.a);
-                // Vertex/CanvasGroup alpha fades the composite exactly once.
+                // CanvasRenderer/CanvasGroup alpha always fades the composite exactly once.
                 result *= i.color.a;
                 #ifdef UNITY_UI_CLIP_RECT
                 half2 mask = saturate((_ClipRect.zw - _ClipRect.xy - abs(i.mask.xy)) * i.mask.zw);

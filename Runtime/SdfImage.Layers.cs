@@ -5,9 +5,10 @@ namespace SDFUI
 {
     public sealed partial class SdfImage
     {
-        // Keep in sync with the shader arrays. All layers composite before the Graphic's alpha.
+        // Keep in sync with the shader arrays.
         public const int MaxEffectLayers = 16;
         [SerializeField] private bool sdfEffectsEnabled = true;
+        [SerializeField] private bool sdfIgnoreComponentAlpha;
         [SerializeField] private List<SdfImageEffect> sdfLayers = new List<SdfImageEffect>();
         [SerializeField, HideInInspector] private bool sdfLayersMigrated;
         [SerializeField, HideInInspector] private LegacyStyle sdfLegacyStyle;
@@ -16,6 +17,8 @@ namespace SDFUI
         private readonly Vector4[] layerModes = new Vector4[MaxEffectLayers];
 
         public bool EffectsEnabled { get => sdfEffectsEnabled; set { if (sdfEffectsEnabled == value) return; sdfEffectsEnabled = value; RefreshEffects(); } }
+        /// <summary>Effects keep their own opacity when Image.color alpha changes. CanvasGroup fades still apply.</summary>
+        public bool IgnoreComponentAlpha { get => sdfIgnoreComponentAlpha; set { if (sdfIgnoreComponentAlpha == value) return; sdfIgnoreComponentAlpha = value; RefreshEffects(); } }
         /// <summary>Frontmost effect first, up to MaxEffectLayers. Call RefreshEffects after editing entries or order.</summary>
         public List<SdfImageEffect> Layers { get { MigrateLayers(); return sdfLayers; } }
         public void RefreshEffects()

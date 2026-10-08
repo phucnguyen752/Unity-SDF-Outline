@@ -8,14 +8,15 @@ namespace SDFUI
     // its entry in place; shared owners switch entries before changing the style.
     internal static class SdfImageMaterials
     {
-        internal const int PropertyCount = 10;
+        internal const int PropertyCount = 11;
         private static readonly int[] PropertyIds =
         {
             Shader.PropertyToID("_SdfDecode"), Shader.PropertyToID("_SourceSize"),
             Shader.PropertyToID("_ImageRect"), Shader.PropertyToID("_SourceBorder"),
             Shader.PropertyToID("_LocalBorder"), Shader.PropertyToID("_Outline"),
             Shader.PropertyToID("_OutlineColor"), Shader.PropertyToID("_OutlineTextureColor"),
-            Shader.PropertyToID("_Shadow"), Shader.PropertyToID("_ShadowColor")
+            Shader.PropertyToID("_Shadow"), Shader.PropertyToID("_ShadowColor"),
+            Shader.PropertyToID("_EffectOptions")
         };
         private static readonly int MainTex = Shader.PropertyToID("_MainTex");
         private static readonly int SdfTex = Shader.PropertyToID("_SdfTex");

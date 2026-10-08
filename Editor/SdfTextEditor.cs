@@ -12,7 +12,7 @@ namespace SDFUI.Editor
     [CustomEditor(typeof(SdfText)), CanEditMultipleObjects]
     public sealed class SdfTextEditor : TMP_EditorPanelUI
     {
-        private SerializedProperty effectsEnabled, layers, layerCount;
+        private SerializedProperty effectsEnabled, ignoreComponentAlpha, layers, layerCount;
         private SerializedProperty curveEnabled, curveAngle;
         private ReorderableList layerList;
         private UnityEditor.Editor fontMaterialEditor;
@@ -24,6 +24,7 @@ namespace SDFUI.Editor
             foreach (SdfText text in targets) _ = text.Layers;
             serializedObject.Update();
             effectsEnabled = serializedObject.FindProperty("sdfEffectsEnabled");
+            ignoreComponentAlpha = serializedObject.FindProperty("sdfIgnoreComponentAlpha");
             curveEnabled = serializedObject.FindProperty("sdfCurveEnabled");
             curveAngle = serializedObject.FindProperty("sdfCurveAngle");
             layers = serializedObject.FindProperty("sdfLayers");
@@ -80,6 +81,8 @@ namespace SDFUI.Editor
                 {
                     if (ToggleSection(effectsEnabled, "Effects Enabled"))
                     {
+                        EditorGUILayout.PropertyField(ignoreComponentAlpha, new GUIContent("Ignore Component Alpha",
+                            "Outline, shadow and glow use their own opacity instead of text vertex alpha. CanvasGroup fades still apply."));
                         bool differentCounts = layerCount.hasMultipleDifferentValues;
                         layerList.draggable = !serializedObject.isEditingMultipleObjects;
                         layerList.DoLayoutList();

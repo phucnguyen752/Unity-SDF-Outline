@@ -26,7 +26,7 @@ This URL follows the `upm` branch. After each release, select **SDF Outline** (o
 
 SDF Outline includes the **SDF Image** and **SDF Text** components. The package ID (`com.sdfimage.ugui`) and installation URL remain unchanged after the library rename.
 
-To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.10.1`. Clicking **Update** while using this tag will not switch to a newer release tag.
+To keep this version, use `https://github.com/phucnguyen752/sdf-image.git#0.11.0`. Clicking **Update** while using this tag will not switch to a newer release tag.
 
 The `upm` branch and version tags contain the `com.sdfimage.ugui` package at the repository root; no `?path=` is needed. The `main` branch contains the full Unity project, with the library in `Assets/SDFImage`. Keep `#upm` in the URL because the default `main` branch does not have a package at its root.
 
@@ -45,6 +45,8 @@ Namespaces and assemblies use `SDFUI`, `SDFUI.Editor` and `SDFUI.Tests.Editor`. 
 Settings belong to the **source texture** and apply to every sprite in that texture. Assigning a regular sprite does not start a bake. Generation enables **Auto Update**, so later changes to the image, import settings or SDF settings trigger an update. You can change Auto Update in SDF Import Settings. The source texture's Inspector shows **Generate** until an SDF is available, then **Open SDF Import Settings**.
 
 Clicking **Cancel** or disabling Auto Update cancels queued and running work and prevents new jobs. Completed results remain available. Disable individual layers to hide them, or turn off **Effects Enabled** to use the standard Image rendering path.
+
+Enable **SDF Effects → Ignore Component Alpha** on SDF Image or SDF Text to keep outline, shadow and glow opacity independent of the component's Color alpha, including at zero. Disabled by default. CanvasGroup and CanvasRenderer fades still apply. From code, set `image.IgnoreComponentAlpha = true` or `label.IgnoreComponentAlpha = true`; both refresh automatically. For text, this also ignores rich-text and gradient vertex alpha on effects; font material Face Color alpha still applies.
 
 For each layer, enable **Use Texture Color** to use the texture's RGB for the effect. **Intensity** `0` produces black, `1` keeps the original color, and values above `1` make it brighter. **Opacity** controls the effect's alpha separately. When disabled, the layer uses **Color** and retains your settings. Existing SDF sprites do not need rebaking.
 
@@ -177,9 +179,9 @@ The Editor needs a graphics device that supports AsyncGPUReadback. Running with 
 
 - **SDF Effects → Layers** is a reorderable list, matching SDF Text: the top entry is in front. Each Image supports up to **16 layers**, with independent enable, color, width/spread, softness and offset. **Effects Enabled** toggles the entire list without losing its settings.
 - Each layer supports **Outer**, **Inner** or **Center** outlines. **Underlay** fills the silhouette behind the sprite for shadows and glow; positive Spread expands it and negative Spread contracts it. Exterior effects stay behind the sprite; inner outlines tint its inner edge.
-- Each layer has its own **Use Texture Color** and **Intensity**. This replaces layer RGB with texture RGB × Intensity, without multiplying by layer Color or Image Color RGB. Alpha still uses the layer Color/Opacity and overall Image alpha. Intensity does not change alpha.
+- Each layer has its own **Use Texture Color** and **Intensity**. This replaces layer RGB with texture RGB × Intensity, without multiplying by layer Color or Image Color RGB. Alpha uses the layer Color/Opacity and, unless **Ignore Component Alpha** is enabled, overall Image alpha. Intensity does not change alpha.
 - Existing outline and shadow settings migrate into two layers. Released scalar APIs and legacy animation/prefab overrides follow their original layers after reordering. Clearing the list remains intentional.
-- Retains the source artwork and transparency for the fill, subject to the selected color compression. `Graphic.color` tints the fill, while its alpha fades the entire image and effects once.
+- Retains the source artwork and transparency for the fill, subject to the selected color compression. `Graphic.color` tints the fill; its alpha also fades effects unless **Ignore Component Alpha** is enabled.
 - Supports Simple, preserve aspect, nine-slice, layout and native size. The quad expands to avoid clipping outlines and shadows.
 - Supports `Mask`, `RectMask2D` including softness, and `CanvasGroup`. Raycasts still use the original RectTransform.
 - SDF Image supports Simple and Sliced with Fill Center enabled. Filled/radial fill, Tiled and Sliced with Fill Center disabled use the standard Unity Image renderer without SDF effects. Text is supported through `SdfText` as described above. SpriteRenderer, UI Toolkit and Coffee SoftMask/UIEffect are not integrated.
@@ -188,7 +190,7 @@ Width, softness, offset, blur and spread use **Canvas local units**. Padding and
 
 The field stores signed distances, positive inside the shape. The algorithm calculates the Euclidean distance to the opposite alpha class with a half-pixel correction. Alpha Threshold defines the boundary. Compressed storage normalizes these distances into a linear single-channel texture; the shader decodes them back to source pixels. This is a raster SDF, not vector reconstruction or MSDF; increasing Max Size helps preserve fine details.
 
-Each image uses one quad, compositing its layers before applying Graphic/CanvasGroup alpha once. Images with matching baked textures, local drawing rectangle, slice mapping and effect settings share a cached material and can batch together. Position, rotation and Graphic tint/alpha do not require separate materials. Different textures, dimensions/pivots, styles, Canvases, clipping or overlapping order can split batches. This does not pack different sprites into an atlas.
+Each image uses one quad. By default its layers composite before applying Graphic/CanvasGroup alpha once. **Ignore Component Alpha** fades only the fill by Graphic alpha while CanvasGroup alpha still fades the completed composite once. Images with matching baked textures, local drawing rectangle, slice mapping and effect settings share a cached material and can batch together. Position, rotation and Graphic tint/alpha do not require separate materials. Different textures, dimensions/pivots, styles, Canvases, clipping or overlapping order can split batches. This does not pack different sprites into an atlas.
 
 Render materials are shared and read-only; edit the component or its `Layers` and call `RefreshEffects()` after changing list entries. A style change detaches from a shared material without changing other images. Material properties are prepared only when dirty. Animated groups reuse material storage, including native stencil variants. The cache keeps at most one spare per live render state and four stencil variants per entry; spares retain no textures and are released as usage shrinks or the final owner is removed. Static images add no per-frame synchronization callback.
 

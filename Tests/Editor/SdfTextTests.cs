@@ -1291,6 +1291,41 @@ namespace SDFUI.Tests
             Assert.That(CountVisible(Render()), Is.Zero);
         }
 
+        [TestCase(SdfOutlinePosition.Outer)]
+        [TestCase(SdfOutlinePosition.Inner)]
+        [TestCase(SdfOutlinePosition.Center)]
+        public void IgnoreComponentAlpha_KeepsTextOutlineVisibleAndCanvasGroupFade(SdfOutlinePosition position)
+        {
+            SdfText text = CreateText(canvas.transform, "O");
+            Assert.That(text.IgnoreComponentAlpha, Is.False);
+            text.Layers.Clear();
+            text.Layers.Add(new SdfTextEffect { Position = position, Width = 6, Color = Color.red });
+            text.RefreshEffects();
+            Color[] opaque = Render();
+            text.color = new Color(1, 1, 1, 0);
+            Assert.That(CountVisible(Render()), Is.Zero);
+            text.IgnoreComponentAlpha = true;
+            Assert.That(CountColored(Render(), Color.red), Is.GreaterThan(20), "Outline remains visible at zero component alpha.");
+            text.Layers[0].Color = new Color(1, 0, 0, 0.7f);
+            text.RefreshEffects();
+            var group = text.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0.4f;
+            Color[] faded = Render();
+            int samples = 0;
+            for (int i = 0; i < opaque.Length; i++)
+            {
+                if (opaque[i].a < 0.95f || opaque[i].r < 0.95f || opaque[i].g > 0.05f) continue;
+                Assert.That(faded[i].a, Is.EqualTo(0.7f * group.alpha).Within(0.045f), "Outline opacity and CanvasGroup multiply once.");
+                samples++;
+            }
+            Assert.That(samples, Is.GreaterThan(20));
+            text.IgnoreComponentAlpha = false;
+            Assert.That(CountVisible(Render()), Is.Zero, "Toggling off restores shared alpha.");
+            text.IgnoreComponentAlpha = true;
+            group.alpha = 0;
+            Assert.That(CountVisible(Render()), Is.Zero, "CanvasGroup still hides the outline.");
+        }
+
         [Test]
         public void NegativeShadowSpread_ContractsTheShadowSilhouette()
         {

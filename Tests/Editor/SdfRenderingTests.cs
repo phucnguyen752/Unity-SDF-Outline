@@ -438,6 +438,35 @@ namespace SDFUI.Tests
             Assert.That(Average(pixels, 28, -6, 4, 12).a, Is.EqualTo(0.4f).Within(0.04f), "Shadow alpha");
         }
 
+        [TestCase(SdfOutlinePosition.Outer, 0f)]
+        [TestCase(SdfOutlinePosition.Outer, 0.3f)]
+        [TestCase(SdfOutlinePosition.Inner, 0f)]
+        [TestCase(SdfOutlinePosition.Inner, 0.3f)]
+        [TestCase(SdfOutlinePosition.Center, 0f)]
+        [TestCase(SdfOutlinePosition.Center, 0.3f)]
+        public void IgnoreComponentAlpha_KeepsImageOutlineOpacityAndCanvasGroupFade(SdfOutlinePosition position, float alpha)
+        {
+            var group = canvas.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0.5f;
+            SdfImage image = CreateImage(canvas.transform);
+            Assert.That(image.IgnoreComponentAlpha, Is.False);
+            image.OutlineWidth = 6;
+            image.OutlinePosition = position;
+            image.OutlineColor = new Color(1, 0, 0, 0.7f);
+            image.color = new Color(1, 1, 1, alpha);
+            image.IgnoreComponentAlpha = true;
+            Color[] pixels = Render();
+            Assert.That(Average(pixels, -6, -6, 12, 12).a, Is.EqualTo(alpha * group.alpha).Within(0.04f), "Fill follows component alpha.");
+            int x = position == SdfOutlinePosition.Outer ? 19 : position == SdfOutlinePosition.Inner ? 12 : 14;
+            float expected = position == SdfOutlinePosition.Outer ? 0.7f : 0.7f + alpha * 0.3f;
+            Assert.That(Average(pixels, x, -6, 1, 12).a, Is.EqualTo(expected * group.alpha).Within(0.04f), "Outline keeps its own opacity.");
+            image.IgnoreComponentAlpha = false;
+            Assert.That(Average(Render(), x, -6, 1, 12).a, Is.LessThanOrEqualTo(alpha * group.alpha + 0.04f), "Toggling off restores shared alpha.");
+            image.IgnoreComponentAlpha = true;
+            group.alpha = 0;
+            Assert.That(Average(Render(), x, -6, 1, 12).a, Is.LessThan(0.01f), "CanvasGroup still hides the outline.");
+        }
+
         [Test]
         public void TranslatedRectMask2D_ClipsFillAndEffectsInTheCorrectCoordinates()
         {

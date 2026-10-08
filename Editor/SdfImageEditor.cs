@@ -10,7 +10,7 @@ namespace SDFUI.Editor
     [CustomEditor(typeof(SdfImage)), CanEditMultipleObjects]
     public sealed class SdfImageEditor : ImageEditor
     {
-        private SerializedProperty effectsEnabled, layers, layerCount;
+        private SerializedProperty effectsEnabled, ignoreComponentAlpha, layers, layerCount;
         private ReorderableList layerList;
 
         protected override void OnEnable()
@@ -19,6 +19,7 @@ namespace SDFUI.Editor
             foreach (SdfImage image in targets) _ = image.Layers;
             serializedObject.Update();
             effectsEnabled = serializedObject.FindProperty("sdfEffectsEnabled");
+            ignoreComponentAlpha = serializedObject.FindProperty("sdfIgnoreComponentAlpha");
             layers = serializedObject.FindProperty("sdfLayers");
             layerCount = serializedObject.FindProperty("sdfLayers.Array.size");
             layerList = new ReorderableList(serializedObject, layers, !serializedObject.isEditingMultipleObjects, true, true, true)
@@ -91,6 +92,8 @@ namespace SDFUI.Editor
                     {
                         if (ToggleSection(effectsEnabled, "Effects Enabled"))
                         {
+                            EditorGUILayout.PropertyField(ignoreComponentAlpha, new GUIContent("Ignore Component Alpha",
+                                "Outline, shadow and glow use their own opacity instead of Color alpha. CanvasGroup fades still apply."));
                             layerList.draggable = !serializedObject.isEditingMultipleObjects;
                             layerList.DoLayoutList();
                             if (layers.arraySize > SdfImage.MaxEffectLayers)
